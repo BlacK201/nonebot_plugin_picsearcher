@@ -15,7 +15,7 @@ from .formdata import FormData
 driver = nonebot.get_driver()
 cookie: str = getattr(driver.config, "ex_cookie", None)
 proxy: str = getattr(driver.config, "proxy", None)
-target: str = "https://exhentai.org/upload/image_lookup.php"
+target: str = "https://upld.e-hentai.org/image_lookup.php"
 
 headers = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
@@ -24,9 +24,9 @@ headers = {
     'Cache-Control': 'max-age=0',
     'Connection': 'keep-alive',
     'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundaryB0NrMSYMfjY5r0l1',
-    'Host': 'exhentai.org',
-    'Origin': 'https://exhentai.org',
-    'Referer': 'https://exhentai.org/?filesearch=1',
+    'Host': 'e-hentai.org',
+    'Origin': 'https://e-hentai.org',
+    'Referer': 'https://e-hentai.org/?filesearch=1',
     'Sec-Fetch-Dest': 'document',
     'Sec-Fetch-Mode': 'navigate',
     'Sec-Fetch-Site': 'same-origin',
@@ -36,12 +36,6 @@ headers = {
 
 if cookie:
     headers['Cookie'] = cookie
-else:
-    headers['Host'] = 'e-hentai.org'
-    headers['Origin'] = 'https://e-hentai.org'
-    headers['Referer'] = 'https://e-hentai.org/?filesearch=1'
-    target: str = "https://upld.e-hentai.org/image_lookup.php"
-
 
 def parse_html(html: str):
     """
@@ -56,7 +50,7 @@ def parse_html(html: str):
     yield from zip(names, hrefs, pics)
 
 
-async def get_pic_from_url(url: str):
+async def get_pic_from_url(url: str, target, headers):
     """
     从接受到的picurl获取图片信息
     :param url:
@@ -73,6 +67,7 @@ async def get_pic_from_url(url: str):
         data.add_field(name="fs_similar", value="on")
         async with session.post(target, data=data, headers=headers, proxy=proxy) as res:
             html = await res.text()
+            print(html)
         return list(parse_html(html))
 
 
@@ -103,11 +98,24 @@ async def get_des(url: str):
     :param url:
     :return:
     """
-    image_data: List[Tuple] = await get_pic_from_url(url)
+    image_data: List[Tuple] = await get_pic_from_url(url, target, headers)
     if not image_data:
-        msg: str = "找不到高相似度的"
-        yield msg
-        return
+        if cookie:
+            headers_ex = headers.copy()
+            headers_ex['Cookie'] = cookie
+            headers_ex['Host'] = 'exhentai.org'
+            headers_ex['Origin'] = 'https://exhentai.org'
+            headers_ex['Referer'] = 'https://exhentai.org/?filesearch=1'
+            image_data: List[Tuple] = \
+                await get_pic_from_url(url, 'https://exhentai.org/upload/image_lookup.php', headers_ex)
+            if not image_data:
+                msg: str = "找不到高相似度的"
+                yield msg
+                return
+        else:
+            msg: str = "找不到高相似度的"
+            yield msg
+            return
     for name, href, pic_url in image_data:
         content = await get_content_from_url(pic_url)
         yield MessageSegment.image(file=content) + f"\n本子名称：{name}\n" + f"链接{href}\n"
