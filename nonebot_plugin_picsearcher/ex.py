@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-from base64 import b64encode
 from typing import List, Tuple
 import io
+import random
 
+from PIL import Image
 from lxml.html import fromstring
 import aiohttp
 import nonebot
@@ -84,7 +85,14 @@ async def get_content_from_url(url: str):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as resp:
-                return f"base64://{b64encode(await resp.read()).decode()}"
+                img = io.BytesIO(await resp.read())
+                im = Image.open(img)
+                r, g, b = im.getpixel((0, 0))
+                im.putpixel((0, 0), (random.randint(r, r + 3) % 255,
+                                     random.randint(g, g + 3) % 255,
+                                     random.randint(b, b + 3) % 255))
+                im.save(img, 'PNG')
+                return img
     except aiohttp.client_exceptions.InvalidURL:
         return url
 

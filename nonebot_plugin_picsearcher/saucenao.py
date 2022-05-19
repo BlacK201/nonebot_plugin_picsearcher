@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import io
+import random
 from typing import List, Tuple
+from PIL import Image
 
 import aiohttp
 from lxml.html import fromstring
@@ -20,6 +22,7 @@ header = {
     'Upgrade-Insecure-Requests': '1',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36'}
 
+headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36'}
 
 def parse_html(html: str):
     """
@@ -72,6 +75,14 @@ async def get_des(url: str):
         yield msg
         return
     for pic in image_data:
-        yield MessageSegment.image(
-            file=pic[0]
-        ) + f"\n相似度:{pic[1]}\n标题:{pic[2]}\npixivid:{pic[3]}\nmember:{pic[4]}\n"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(pic[0], headers=headers) as resp:
+                print(pic[0])
+                img = io.BytesIO(await resp.read())
+                im = Image.open(img)
+                r, g, b = im.getpixel((0, 0))
+                im.putpixel((0, 0), (random.randint(r, r + 3) % 255,
+                                     random.randint(g, g + 3) % 255,
+                                     random.randint(b, b + 3) % 255))
+                im.save(img, 'PNG')
+        yield MessageSegment.image(file=img) + f"\n相似度:{pic[1]}\n标题:{pic[2]}\npixivid:{pic[3]}\nmember:{pic[4]}\n"
