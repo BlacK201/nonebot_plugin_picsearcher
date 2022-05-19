@@ -82,10 +82,15 @@ async def get_content_from_url(url: str):
             async with session.get(url, headers=headers) as resp:
                 img = io.BytesIO(await resp.read())
                 im = Image.open(img)
+                origin_mode = im.mode
+                if not im.mode == "RGB":
+                    im = im.convert("RGB")
                 r, g, b = im.getpixel((0, 0))
                 im.putpixel((0, 0), (random.randint(r, r + 3) % 255,
                                      random.randint(g, g + 3) % 255,
                                      random.randint(b, b + 3) % 255))
+                if not im.mode == origin_mode:
+                    im = im.convert(origin_mode)
                 im.save(img, 'PNG')
                 return img
     except aiohttp.client_exceptions.InvalidURL:

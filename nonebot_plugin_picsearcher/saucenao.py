@@ -80,9 +80,14 @@ async def get_des(url: str):
                 print(pic[0])
                 img = io.BytesIO(await resp.read())
                 im = Image.open(img)
+                origin_mode = im.mode
+                if not im.mode == "RGB":
+                    im = im.convert("RGB")
                 r, g, b = im.getpixel((0, 0))
                 im.putpixel((0, 0), (random.randint(r, r + 3) % 255,
                                      random.randint(g, g + 3) % 255,
                                      random.randint(b, b + 3) % 255))
+                if not im.mode == origin_mode:
+                    im = im.convert(origin_mode)
                 im.save(img, 'PNG')
         yield MessageSegment.image(file=img) + f"\n相似度:{pic[1]}\n标题:{pic[2]}\npixivid:{pic[3]}\nmember:{pic[4]}\n"
